@@ -101,14 +101,14 @@
     piku_branch: "{{ piku_branch | default('master', true) }}"
     piku_raw_url: "https://raw.githubusercontent.com/{{ piku_repo }}/{{ piku_branch }}"
   tasks:
-    # Note: Using curl instead of get_url to bypass CDN caching issues
-    # get_url's force: yes doesn't help when GitHub's CDN serves stale content
+    # Note: Using GitHub API instead of raw.githubusercontent.com to bypass CDN caching
+    # GitHub's CDN caches raw content aggressively and ignores query parameters
     - name: Fetch piku.py script
       shell: |
-        curl -fsSL "{{ piku_raw_url }}/piku.py?nocache={{ ansible_date_time.epoch }}" -o ~/piku.py
+        curl -fsSL "https://api.github.com/repos/{{ piku_repo }}/contents/piku.py?ref={{ piku_branch }}" \
+          -H "Accept: application/vnd.github.v3.raw" \
+          -o ~/piku.py
         chmod 0700 ~/piku.py
-      args:
-        creates: ""
 
     - name: Run piku setup
       shell: python3 ~/piku.py setup
