@@ -106,6 +106,7 @@
         url: "{{ piku_raw_url }}/piku.py"
         dest: ~/piku.py
         mode: 0700
+        force: yes
 
     - name: Run piku setup
       shell: python3 ~/piku.py setup

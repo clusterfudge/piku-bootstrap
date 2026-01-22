@@ -95,7 +95,11 @@ extract_port() {
 # Helper: Get app's assigned port from piku
 get_app_port() {
     local app_name="$1"
-    su - piku -c "python3 ~/piku.py config:get $app_name PORT" 2>/dev/null || echo ""
+    # Filter out warnings and get only the port number
+    local port_output
+    port_output=$(su - piku -c "python3 ~/piku.py config:get $app_name PORT" 2>/dev/null || echo "")
+    # Extract just the numeric port from output (filter out warnings)
+    echo "$port_output" | grep -oE '^[0-9]+$' | head -1
 }
 
 # ============================================
