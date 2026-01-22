@@ -128,7 +128,8 @@ wait_for_deploy() {
     for i in $(seq 1 $max_attempts); do
         if ls /home/piku/.piku/uwsgi-enabled/${app_name}_*.ini 2>/dev/null | head -1 >/dev/null; then
             # Config exists, wait a bit more for uwsgi to actually start the worker
-            sleep 3
+            # uWSGI emperor mode can take a few seconds to spawn the worker
+            sleep 5
             return 0
         fi
         sleep 1
@@ -204,6 +205,11 @@ if [ -n "$PORT" ]; then
             pass "App responds with expected message"
         else
             fail "Unexpected response: $response"
+            # Show app logs when there's an error
+            echo "App logs:"
+            cat /home/piku/.piku/logs/$APP_NAME/*.log 2>/dev/null | tail -30 || true
+            echo "uwsgi emperor log:"
+            cat /home/piku/.piku/uwsgi/uwsgi.log 2>/dev/null | tail -20 || true
         fi
     else
         fail "App did not become accessible on port $PORT"
