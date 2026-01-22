@@ -42,12 +42,25 @@ Validates that `PYTHON_VERSION` in `ENV` takes priority over `.python-version` f
 
 ## Testing with Custom Piku Fork/Branch
 
-By default, the tests install piku from the official repository. To test with a custom fork or branch, modify `run_tests.sh`:
+The tests support configuration via environment variables:
 
 ```bash
-# In run_tests.sh, change the install command:
-./piku-bootstrap install --piku-repo=YOUR_USERNAME/piku --piku-branch=YOUR_BRANCH
+# Default: uses clusterfudge/piku with UV fixes
+./run_tests.sh
+
+# Use a custom fork/branch:
+PIKU_REPO=your-username/piku PIKU_BRANCH=your-branch ./run_tests.sh
+
+# Once UV fixes are merged upstream:
+PIKU_REPO=piku/piku PIKU_BRANCH=master ./run_tests.sh
 ```
+
+## CI Integration
+
+The E2E tests run automatically on GitHub Actions via `.github/workflows/e2e-uv.yml`. The workflow:
+- Triggers on push/PR to main branch
+- Uses Docker-in-Docker to run systemd containers
+- Currently uses `clusterfudge/piku` with UV fixes until merged upstream
 
 ## Debugging Test Failures
 
