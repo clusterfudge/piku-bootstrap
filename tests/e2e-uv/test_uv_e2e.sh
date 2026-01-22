@@ -156,6 +156,12 @@ dependencies = [
 ]
 EOF
 
+# Use system Python version to match uWSGI (which is compiled against system Python)
+# This is a limitation: uWSGI can only use the Python version it was compiled with
+cat > ENV << 'EOF'
+PYTHON_VERSION=3.10
+EOF
+
 # Use WSGI module format for piku
 cat > wsgi.py << 'EOF'
 from flask import Flask
@@ -359,6 +365,11 @@ dependencies = [
 ]
 EOF
 
+# Use system Python to match uWSGI
+cat > ENV << 'EOF'
+PYTHON_VERSION=3.10
+EOF
+
 cat > wsgi.py << 'EOF'
 from flask import Flask
 import requests
@@ -417,6 +428,11 @@ name = "test-uv-depupdate"
 version = "0.1.0"
 requires-python = ">=3.10"
 dependencies = ["flask>=2.0"]
+EOF
+
+# Use system Python to match uWSGI
+cat > ENV << 'EOF'
+PYTHON_VERSION=3.10
 EOF
 
 cat > wsgi.py << 'EOF'
