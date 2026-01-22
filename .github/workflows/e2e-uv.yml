@@ -23,7 +23,7 @@ jobs:
         run: |
           cd tests/e2e-uv
           chmod +x run_tests.sh test_uv_e2e.sh
-          ./run_tests.sh
+          ./run_tests.sh --no-cache
         env:
           # Use clusterfudge/piku with UV fixes until merged upstream
           PIKU_REPO: clusterfudge/piku
