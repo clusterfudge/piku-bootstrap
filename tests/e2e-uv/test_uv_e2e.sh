@@ -60,9 +60,14 @@ deploy_app() {
     git remote remove piku 2>/dev/null || true
     git remote add piku "piku@localhost:$app_name"
     
-    # Push and capture output
-    GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" \
-        git push -f piku master 2>&1
+    echo "Pushing to piku@localhost:$app_name..." >&2
+    
+    # Push and capture output (both stdout and stderr)
+    local push_output
+    push_output=$(GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -v" \
+        git push -f piku master 2>&1) || true
+    
+    echo "$push_output"
 }
 
 # Helper: Destroy an app
@@ -165,18 +170,20 @@ wsgi: wsgi:application
 EOF
 
 output=$(deploy_app "$APP_NAME")
+echo "Deploy output:"
+echo "$output"
+echo "---"
 
-if echo "$output" | grep -q "uv"; then
+if echo "$output" | grep -q "Python (uv) app detected\|uv sync\|Using Python version"; then
     pass "UV deployment detected in output"
 else
     fail "UV deployment not detected"
-    echo "$output"
 fi
 
-if echo "$output" | grep -q "Creating app\|-----> "; then
-    pass "App was created"
+if echo "$output" | grep -q "Creating app\|-----> Python"; then
+    pass "App deployment started"
 else
-    fail "App creation message not found"
+    fail "App deployment message not found"
 fi
 
 # Wait for deployment to complete
