@@ -101,9 +101,11 @@ get_app_port() {
     local app_name="$1"
     local port=""
     
-    # First try to get from the uwsgi config file
-    local uwsgi_config="/home/piku/.piku/uwsgi-available/${app_name}_web.1.ini"
-    if [ -f "$uwsgi_config" ]; then
+    # Find any uwsgi config for this app (web.1 or wsgi.1)
+    local uwsgi_config
+    uwsgi_config=$(ls /home/piku/.piku/uwsgi-available/${app_name}_*.ini 2>/dev/null | head -1)
+    
+    if [ -n "$uwsgi_config" ] && [ -f "$uwsgi_config" ]; then
         port=$(grep -oP 'http-socket = 127\.0\.0\.1:\K[0-9]+' "$uwsgi_config" 2>/dev/null || echo "")
     fi
     
@@ -121,16 +123,18 @@ get_app_port() {
 wait_for_deploy() {
     local app_name="$1"
     local max_attempts="${2:-30}"
-    local uwsgi_config="/home/piku/.piku/uwsgi-enabled/${app_name}_web.1.ini"
     
+    # Check for both web.1 and wsgi.1 configs (depends on Procfile)
     for i in $(seq 1 $max_attempts); do
-        if [ -f "$uwsgi_config" ]; then
+        if ls /home/piku/.piku/uwsgi-enabled/${app_name}_*.ini 2>/dev/null | head -1 >/dev/null; then
             # Config exists, wait a bit more for uwsgi to actually start the worker
-            sleep 2
+            sleep 3
             return 0
         fi
         sleep 1
     done
+    echo "No uwsgi config found for $app_name after $max_attempts seconds" >&2
+    ls -la /home/piku/.piku/uwsgi-enabled/ >&2 || true
     return 1
 }
 
