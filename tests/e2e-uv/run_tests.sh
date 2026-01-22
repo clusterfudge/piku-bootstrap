@@ -85,6 +85,11 @@ echo ""
 echo -e "${YELLOW}=== Running piku-bootstrap first-run ===${NC}"
 docker exec "$CONTAINER_NAME" bash -c './piku-bootstrap first-run --no-interactive 2>&1 | tail -20'
 
+# Override the cloned playbooks with the ones from the Docker image (which came from this repo)
+# This ensures we test the current version of the playbooks, not what's on GitHub
+echo -e "${YELLOW}=== Overriding playbooks with local version ===${NC}"
+docker exec "$CONTAINER_NAME" bash -c 'cp -r /root/playbooks/* ~/.piku-bootstrap/piku-bootstrap/playbooks/'
+
 echo ""
 echo -e "${YELLOW}=== Installing piku from $PIKU_REPO @ $PIKU_BRANCH ===${NC}"
 docker exec "$CONTAINER_NAME" bash -c "./piku-bootstrap install --piku-repo=$PIKU_REPO --piku-branch=$PIKU_BRANCH 2>&1 | tail -30"
