@@ -77,6 +77,11 @@ wait_for_app() {
     local port="$1"
     local max_attempts="${2:-30}"
     
+    # Validate port is numeric
+    if ! [[ "$port" =~ ^[0-9]+$ ]]; then
+        return 1
+    fi
+    
     for i in $(seq 1 $max_attempts); do
         if curl -s --max-time 2 "http://127.0.0.1:$port/" >/dev/null 2>&1; then
             return 0
@@ -86,20 +91,42 @@ wait_for_app() {
     return 1
 }
 
-# Helper: Extract port from deployment output
-extract_port() {
-    local output="$1"
-    echo "$output" | grep -oP "picking free port \K\d+" | tail -1
-}
-
-# Helper: Get app's assigned port from piku
+# Helper: Get app's assigned port from uwsgi config or ENV
 get_app_port() {
     local app_name="$1"
-    # Filter out warnings and get only the port number
-    local port_output
-    port_output=$(su - piku -c "python3 ~/piku.py config:get $app_name PORT" 2>/dev/null || echo "")
-    # Extract just the numeric port from output (filter out warnings)
-    echo "$port_output" | grep -oE '^[0-9]+$' | head -1
+    local port=""
+    
+    # First try to get from the uwsgi config file
+    local uwsgi_config="/home/piku/.piku/uwsgi-available/${app_name}_web.1.ini"
+    if [ -f "$uwsgi_config" ]; then
+        port=$(grep -oP 'http-socket = 127\.0\.0\.1:\K[0-9]+' "$uwsgi_config" 2>/dev/null || echo "")
+    fi
+    
+    # If not found, try piku config
+    if [ -z "$port" ]; then
+        local port_output
+        port_output=$(su - piku -c "python3 ~/piku.py config:get $app_name PORT" 2>/dev/null || echo "")
+        port=$(echo "$port_output" | grep -oE '^[0-9]+$' | head -1)
+    fi
+    
+    echo "$port"
+}
+
+# Helper: Wait for uwsgi to create the config and start the app
+wait_for_deploy() {
+    local app_name="$1"
+    local max_attempts="${2:-30}"
+    local uwsgi_config="/home/piku/.piku/uwsgi-enabled/${app_name}_web.1.ini"
+    
+    for i in $(seq 1 $max_attempts); do
+        if [ -f "$uwsgi_config" ]; then
+            # Config exists, wait a bit more for uwsgi to actually start the worker
+            sleep 2
+            return 0
+        fi
+        sleep 1
+    done
+    return 1
 }
 
 # ============================================
@@ -119,9 +146,9 @@ dependencies = [
 ]
 EOF
 
-cat > app.py << 'EOF'
+# Use WSGI module format for piku
+cat > wsgi.py << 'EOF'
 from flask import Flask
-import os
 
 app = Flask(__name__)
 
@@ -129,13 +156,12 @@ app = Flask(__name__)
 def hello():
     return 'Hello from UV!'
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+# WSGI entry point
+application = app
 EOF
 
 cat > Procfile << 'EOF'
-web: python app.py
+wsgi: wsgi:application
 EOF
 
 output=$(deploy_app "$APP_NAME")
@@ -147,11 +173,14 @@ else
     echo "$output"
 fi
 
-if echo "$output" | grep -q "Creating app"; then
+if echo "$output" | grep -q "Creating app\|-----> "; then
     pass "App was created"
 else
     fail "App creation message not found"
 fi
+
+# Wait for deployment to complete
+wait_for_deploy "$APP_NAME" 30
 
 # Get port and test HTTP
 PORT=$(get_app_port "$APP_NAME")
@@ -170,16 +199,19 @@ if [ -n "$PORT" ]; then
         # Show logs for debugging
         echo "App logs:"
         cat /home/piku/.piku/logs/$APP_NAME/*.log 2>/dev/null | tail -20 || true
+        echo "uwsgi status:"
+        systemctl status uwsgi-piku --no-pager 2>/dev/null | tail -10 || true
     fi
 else
     fail "Could not get PORT for app"
+    echo "uwsgi config files:"
+    ls -la /home/piku/.piku/uwsgi-available/ 2>/dev/null || true
+    ls -la /home/piku/.piku/uwsgi-enabled/ 2>/dev/null || true
 fi
 
 # ============================================
 section "Test 2: Python Version via ENV"
 # ============================================
-# This test verifies that PYTHON_VERSION in ENV is passed to uv
-# We use 3.10 which is likely available and test that the message shows up
 APP_NAME="test-uv-pyver-env"
 destroy_app "$APP_NAME"
 create_app "$APP_NAME"
@@ -192,10 +224,9 @@ requires-python = ">=3.10"
 dependencies = ["flask>=2.0"]
 EOF
 
-cat > app.py << 'EOF'
+cat > wsgi.py << 'EOF'
 from flask import Flask
 import sys
-import os
 
 app = Flask(__name__)
 
@@ -203,16 +234,13 @@ app = Flask(__name__)
 def hello():
     return f'Python {sys.version_info.major}.{sys.version_info.minor}'
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+application = app
 EOF
 
 cat > Procfile << 'EOF'
-web: python app.py
+wsgi: wsgi:application
 EOF
 
-# Use 3.10 which should be available on most systems
 cat > ENV << 'EOF'
 PYTHON_VERSION=3.10
 EOF
@@ -226,6 +254,7 @@ else
     echo "$output" | grep -i python || true
 fi
 
+wait_for_deploy "$APP_NAME" 30
 PORT=$(get_app_port "$APP_NAME")
 if [ -n "$PORT" ] && wait_for_app "$PORT" 30; then
     response=$(curl -s "http://127.0.0.1:$PORT/")
@@ -241,8 +270,6 @@ fi
 # ============================================
 section "Test 3: Python Version via .python-version"
 # ============================================
-# This test verifies that .python-version file is read by piku
-# We use 3.10 to avoid requiring UV to download a new Python
 APP_NAME="test-uv-pyver-file"
 destroy_app "$APP_NAME"
 create_app "$APP_NAME"
@@ -255,10 +282,9 @@ requires-python = ">=3.10"
 dependencies = ["flask>=2.0"]
 EOF
 
-cat > app.py << 'EOF'
+cat > wsgi.py << 'EOF'
 from flask import Flask
 import sys
-import os
 
 app = Flask(__name__)
 
@@ -266,16 +292,13 @@ app = Flask(__name__)
 def hello():
     return f'Python {sys.version_info.major}.{sys.version_info.minor}'
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+application = app
 EOF
 
 cat > Procfile << 'EOF'
-web: python app.py
+wsgi: wsgi:application
 EOF
 
-# Use 3.10 to match what's installed on the system
 echo "3.10" > .python-version
 
 output=$(deploy_app "$APP_NAME")
@@ -287,6 +310,7 @@ else
     echo "$output" | grep -i python || true
 fi
 
+wait_for_deploy "$APP_NAME" 30
 PORT=$(get_app_port "$APP_NAME")
 if [ -n "$PORT" ] && wait_for_app "$PORT" 30; then
     response=$(curl -s "http://127.0.0.1:$PORT/")
@@ -318,30 +342,27 @@ dependencies = [
 ]
 EOF
 
-cat > app.py << 'EOF'
+cat > wsgi.py << 'EOF'
 from flask import Flask
 import requests
 import click
-import os
 
 app = Flask(__name__)
 
 @app.route('/')
 def hello():
-    # Prove all deps are importable
     return f'flask={Flask.__name__}, requests={requests.__version__}, click={click.__version__}'
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+application = app
 EOF
 
 cat > Procfile << 'EOF'
-web: python app.py
+wsgi: wsgi:application
 EOF
 
 output=$(deploy_app "$APP_NAME")
 
+wait_for_deploy "$APP_NAME" 30
 PORT=$(get_app_port "$APP_NAME")
 if [ -n "$PORT" ] && wait_for_app "$PORT" 30; then
     response=$(curl -s "http://127.0.0.1:$PORT/")
@@ -381,9 +402,8 @@ requires-python = ">=3.10"
 dependencies = ["flask>=2.0"]
 EOF
 
-cat > app.py << 'EOF'
+cat > wsgi.py << 'EOF'
 from flask import Flask
-import os
 try:
     import requests
     has_requests = True
@@ -396,17 +416,16 @@ app = Flask(__name__)
 def hello():
     return f'has_requests={has_requests}'
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+application = app
 EOF
 
 cat > Procfile << 'EOF'
-web: python app.py
+wsgi: wsgi:application
 EOF
 
 deploy_app "$APP_NAME" >/dev/null
 
+wait_for_deploy "$APP_NAME" 30
 PORT=$(get_app_port "$APP_NAME")
 if [ -n "$PORT" ] && wait_for_app "$PORT" 30; then
     response=$(curl -s "http://127.0.0.1:$PORT/")
@@ -437,9 +456,9 @@ else
     pass "Redeploy processed"
 fi
 
-sleep 3  # Wait for app restart
+sleep 5  # Wait for app restart
 
-if wait_for_app "$PORT" 30; then
+if [ -n "$PORT" ] && wait_for_app "$PORT" 30; then
     response=$(curl -s "http://127.0.0.1:$PORT/")
     if echo "$response" | grep -q "has_requests=True"; then
         pass "After redeploy: requests is installed"
@@ -453,8 +472,6 @@ fi
 # ============================================
 section "Test 6: ENV Priority Over .python-version"
 # ============================================
-# This test verifies that PYTHON_VERSION in ENV takes priority over .python-version file
-# We use different but both likely-available versions
 APP_NAME="test-uv-env-priority"
 destroy_app "$APP_NAME"
 create_app "$APP_NAME"
@@ -467,10 +484,9 @@ requires-python = ">=3.10"
 dependencies = ["flask>=2.0"]
 EOF
 
-cat > app.py << 'EOF'
+cat > wsgi.py << 'EOF'
 from flask import Flask
 import sys
-import os
 
 app = Flask(__name__)
 
@@ -478,13 +494,11 @@ app = Flask(__name__)
 def hello():
     return f'Python {sys.version_info.major}.{sys.version_info.minor}'
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+application = app
 EOF
 
 cat > Procfile << 'EOF'
-web: python app.py
+wsgi: wsgi:application
 EOF
 
 # .python-version says 3.11
@@ -503,6 +517,7 @@ else
     echo "$output" | grep -i python || true
 fi
 
+wait_for_deploy "$APP_NAME" 30
 PORT=$(get_app_port "$APP_NAME")
 if [ -n "$PORT" ] && wait_for_app "$PORT" 30; then
     response=$(curl -s "http://127.0.0.1:$PORT/")
