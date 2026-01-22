@@ -489,7 +489,11 @@ else
     pass "Redeploy processed"
 fi
 
-sleep 5  # Wait for app restart
+# Wait for uwsgi to restart the app after redeploy
+wait_for_deploy "$APP_NAME" 30
+
+# Get the (possibly new) port after redeploy
+PORT=$(get_app_port "$APP_NAME")
 
 if [ -n "$PORT" ] && wait_for_app "$PORT" 30; then
     response=$(curl -s "http://127.0.0.1:$PORT/")
@@ -499,7 +503,8 @@ if [ -n "$PORT" ] && wait_for_app "$PORT" 30; then
         fail "After redeploy: requests still missing: $response"
     fi
 else
-    fail "App not accessible after redeploy"
+    fail "App not accessible after redeploy (port: $PORT)"
+    cat /home/piku/.piku/logs/$APP_NAME/*.log 2>/dev/null | tail -20 || true
 fi
 
 # ============================================
