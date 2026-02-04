@@ -12,4 +12,4 @@ RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh
 
 WORKDIR /tests
 
-CMD ["bash"]
+CMD ["sleep", "infinity"]
