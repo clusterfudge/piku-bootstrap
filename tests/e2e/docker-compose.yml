@@ -1,4 +1,3 @@
-
 services:
   piku-server:
     build:
@@ -12,24 +11,12 @@ services:
     cgroup: host
     networks:
       - piku-network
-    environment:
-      - PIKU_REPO=${PIKU_REPO:-piku/piku}
-      - PIKU_BRANCH=${PIKU_BRANCH:-master}
-    healthcheck:
-      test: ["CMD", "test", "-f", "/root/.piku-bootstrap-complete"]
-      interval: 10s
-      timeout: 5s
-      retries: 60
-      start_period: 30s
 
   test-client:
     build:
       context: .
       dockerfile: client/Dockerfile
     hostname: test-client
-    depends_on:
-      piku-server:
-        condition: service_healthy
     networks:
       - piku-network
     volumes:
@@ -38,8 +25,6 @@ services:
       - shared-keys:/shared-keys:ro
     environment:
       - PIKU_SERVER=piku-server
-      - PIKU_REPO=${PIKU_REPO:-piku/piku}
-      - PIKU_BRANCH=${PIKU_BRANCH:-master}
     command: ["sleep", "infinity"]
 
 networks:

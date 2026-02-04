@@ -1,13 +1,10 @@
 #!/bin/bash
 # E2E Test Runner for piku-bootstrap
-# Orchestrates multi-container tests using Docker Compose
-
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Configuration
 COMPOSE_PROJECT="piku-e2e-tests"
 KEEP_CONTAINERS=false
 NO_BUILD=false
@@ -15,15 +12,14 @@ TEST_FILTER=""
 PIKU_REPO="${PIKU_REPO:-piku/piku}"
 PIKU_BRANCH="${PIKU_BRANCH:-master}"
 
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 usage() {
-    cat << EOF
-Usage: $0 [OPTIONS] [TEST_PATTERN]
+    cat << 'USAGE'
+Usage: ./run_e2e_tests.sh [OPTIONS] [TEST_PATTERN]
 
 Run E2E tests for piku-bootstrap in Docker containers.
 
@@ -34,34 +30,16 @@ OPTIONS:
     --piku-repo=REPO    GitHub repo to install piku from (default: piku/piku)
     --piku-branch=BRANCH Branch to install from (default: master)
 
-TEST_PATTERN:
-    Optional pattern to filter which tests to run (e.g., "python" or "nodejs")
-
 EXAMPLES:
-    $0                          # Run all tests
-    $0 --keep                   # Run tests, keep containers for debugging
-    $0 python                   # Run only Python-related tests
-    $0 --piku-repo=myuser/piku  # Test with a fork
-
-DEBUGGING:
-    After running with --keep, you can:
-    - docker exec -it piku-e2e-tests-test-client-1 bash
-    - docker exec -it piku-e2e-tests-piku-server-1 bash
-    - docker compose -p $COMPOSE_PROJECT logs -f
-EOF
+    ./run_e2e_tests.sh                          # Run all tests
+    ./run_e2e_tests.sh --keep                 # Keep containers for debugging
+    ./run_e2e_tests.sh python                 # Run only Python-related tests
+USAGE
 }
 
-log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
-
-log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
-
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
+log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
+log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 cleanup() {
     if [ "$KEEP_CONTAINERS" = false ]; then
@@ -73,53 +51,25 @@ cleanup() {
     fi
 }
 
-# Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        -k|--keep)
-            KEEP_CONTAINERS=true
-            shift
-            ;;
-        -n|--no-build)
-            NO_BUILD=true
-            shift
-            ;;
-        --piku-repo=*)
-            PIKU_REPO="${1#*=}"
-            shift
-            ;;
-        --piku-branch=*)
-            PIKU_BRANCH="${1#*=}"
-            shift
-            ;;
-        -*)
-            log_error "Unknown option: $1"
-            usage
-            exit 1
-            ;;
-        *)
-            TEST_FILTER="$1"
-            shift
-            ;;
+        -h|--help) usage; exit 0 ;;
+        -k|--keep) KEEP_CONTAINERS=true; shift ;;
+        -n|--no-build) NO_BUILD=true; shift ;;
+        --piku-repo=*) PIKU_REPO="${1#*=}"; shift ;;
+        --piku-branch=*) PIKU_BRANCH="${1#*=}"; shift ;;
+        -*) log_error "Unknown option: $1"; usage; exit 1 ;;
+        *) TEST_FILTER="$1"; shift ;;
     esac
 done
 
-# Set up cleanup trap
 trap cleanup EXIT
 
 log_info "=== Piku E2E Test Suite ==="
 log_info "Piku Repository: $PIKU_REPO"
 log_info "Piku Branch: $PIKU_BRANCH"
-[ -n "$TEST_FILTER" ] && log_info "Test Filter: $TEST_FILTER"
 
-# Export for docker compose
-export PIKU_REPO
-export PIKU_BRANCH
-export COMPOSE_PROJECT
+export PIKU_REPO PIKU_BRANCH COMPOSE_PROJECT
 
 # Build images
 if [ "$NO_BUILD" = false ]; then
@@ -127,33 +77,48 @@ if [ "$NO_BUILD" = false ]; then
     docker compose -p "$COMPOSE_PROJECT" build
 fi
 
-# Start containers
-log_info "Starting containers (this may take a few minutes for piku bootstrap)..."
-docker compose -p "$COMPOSE_PROJECT" up -d
+# Start piku-server only first
+log_info "Starting piku-server container..."
+docker compose -p "$COMPOSE_PROJECT" up -d piku-server
 
-# Wait for piku-server to be healthy
-log_info "Waiting for piku-server to be ready..."
-TIMEOUT=600
-ELAPSED=0
-while [ $ELAPSED -lt $TIMEOUT ]; do
-    if docker compose -p "$COMPOSE_PROJECT" ps piku-server | grep -q "healthy"; then
-        log_info "piku-server is ready!"
+# Wait for systemd to be ready
+log_info "Waiting for systemd to start..."
+for i in $(seq 1 30); do
+    if docker compose -p "$COMPOSE_PROJECT" exec -T piku-server systemctl is-system-running --wait 2>/dev/null | grep -qE "(running|degraded)"; then
+        log_info "Systemd is ready"
         break
     fi
-    sleep 10
-    ELAPSED=$((ELAPSED + 10))
-    echo -n "."
+    sleep 2
 done
-echo
 
-if [ $ELAPSED -ge $TIMEOUT ]; then
-    log_error "Timeout waiting for piku-server"
-    docker compose -p "$COMPOSE_PROJECT" logs piku-server
-    exit 1
-fi
+# Run piku-bootstrap
+log_info "Running piku-bootstrap first-run..."
+docker compose -p "$COMPOSE_PROJECT" exec -T piku-server bash -c './piku-bootstrap first-run --no-interactive'
+
+log_info "Installing piku from $PIKU_REPO @ $PIKU_BRANCH..."
+docker compose -p "$COMPOSE_PROJECT" exec -T piku-server bash -c "./piku-bootstrap install --piku-repo=$PIKU_REPO --piku-branch=$PIKU_BRANCH"
+
+# Set up SSH keys
+log_info "Setting up SSH keys..."
+docker compose -p "$COMPOSE_PROJECT" exec -T piku-server bash -c '
+    mkdir -p /root/.ssh
+    ssh-keygen -t ed25519 -f /root/.ssh/id_ed25519 -N "" -q
+    cat /root/.ssh/id_ed25519.pub >> /root/.ssh/authorized_keys
+    chmod 600 /root/.ssh/authorized_keys
+    mkdir -p /shared-keys
+    cp /root/.ssh/id_ed25519 /shared-keys/
+    cp /root/.ssh/id_ed25519.pub /shared-keys/
+    chmod 644 /shared-keys/id_ed25519.pub
+    chmod 600 /shared-keys/id_ed25519
+    cat /root/.ssh/id_ed25519.pub | sudo -u piku tee -a /home/piku/.ssh/authorized_keys > /dev/null
+'
+
+# Now start test-client
+log_info "Starting test-client container..."
+docker compose -p "$COMPOSE_PROJECT" up -d test-client
 
 # Set up SSH on the client
-log_info "Setting up SSH keys on test client..."
+log_info "Configuring test client..."
 docker compose -p "$COMPOSE_PROJECT" exec -T test-client bash -c '
     cp /shared-keys/id_ed25519 /root/.ssh/
     chmod 600 /root/.ssh/id_ed25519
@@ -162,7 +127,7 @@ docker compose -p "$COMPOSE_PROJECT" exec -T test-client bash -c '
     git config --global user.name "Piku Test"
 '
 
-# Find and run tests
+# Run tests
 log_info "Running tests..."
 TESTS_PASSED=0
 TESTS_FAILED=0
@@ -183,10 +148,7 @@ for test_file in $TEST_FILES; do
     test_name=$(basename "$test_file" .sh)
     log_info "Running: $test_name"
     
-    if docker compose -p "$COMPOSE_PROJECT" exec -T test-client bash -c "
-        source /lib/test_helpers.sh
-        bash /$test_file
-    "; then
+    if docker compose -p "$COMPOSE_PROJECT" exec -T test-client bash -c "source /lib/test_helpers.sh && bash /$test_file"; then
         log_info "PASSED: $test_name"
         TESTS_PASSED=$((TESTS_PASSED + 1))
     else
