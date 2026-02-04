@@ -93,10 +93,10 @@ done
 
 # Run piku-bootstrap
 log_info "Running piku-bootstrap first-run..."
-docker compose -p "$COMPOSE_PROJECT" exec -T piku-server bash -c './piku-bootstrap first-run --no-interactive'
+docker compose -p "$COMPOSE_PROJECT" exec -T piku-server bash -c 'cd /root && ./piku-bootstrap first-run --no-interactive'
 
 log_info "Installing piku from $PIKU_REPO @ $PIKU_BRANCH..."
-docker compose -p "$COMPOSE_PROJECT" exec -T piku-server bash -c "./piku-bootstrap install --piku-repo=$PIKU_REPO --piku-branch=$PIKU_BRANCH"
+docker compose -p "$COMPOSE_PROJECT" exec -T piku-server bash -c "cd /root && ./piku-bootstrap install --piku-repo=$PIKU_REPO --piku-branch=$PIKU_BRANCH"
 
 # Set up SSH keys
 log_info "Setting up SSH keys..."
