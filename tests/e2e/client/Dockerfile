@@ -1,5 +1,5 @@
 # Test Client Dockerfile
-FROM --platform=linux/amd64 ubuntu:22.04
+FROM ubuntu:22.04
 
 RUN apt-get update && apt-get install -y \
     curl \
@@ -11,5 +11,3 @@ RUN apt-get update && apt-get install -y \
 RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh
 
 WORKDIR /tests
-
-CMD ["bash", "-c", "while true; do sleep 1000; done"]
