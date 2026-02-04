@@ -25,7 +25,7 @@ services:
       - shared-keys:/shared-keys:ro
     environment:
       - PIKU_SERVER=piku-server
-    command: ["/bin/bash", "-c", "while true; do sleep 1000; done"]
+    command: ["cat"]
 
 networks:
   piku-network:
