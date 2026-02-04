@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  piku-server:
+    build:
+      context: ../../
+      dockerfile: tests/e2e/server/Dockerfile
+      args:
+        PIKU_REPO: ${PIKU_REPO:-piku/piku}
+        PIKU_BRANCH: ${PIKU_BRANCH:-master}
+    hostname: piku-server
+    privileged: true
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - shared-keys:/shared-keys
+    cgroup: host
+    networks:
+      - piku-network
+    healthcheck:
+      test: ["CMD", "test", "-f", "/root/.piku-bootstrap-complete"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+
+  test-client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    hostname: test-client
+    depends_on:
+      piku-server:
+        condition: service_healthy
+    networks:
+      - piku-network
+    volumes:
+      - ./tests:/tests:ro
+      - ./lib:/lib:ro
+      - shared-keys:/shared-keys:ro
+    environment:
+      - PIKU_SERVER=piku-server
+      - PIKU_REPO=${PIKU_REPO:-piku/piku}
+      - PIKU_BRANCH=${PIKU_BRANCH:-master}
+    command: ["sleep", "infinity"]
+
+networks:
+  piku-network:
+    driver: bridge
+
+volumes:
+  shared-keys:

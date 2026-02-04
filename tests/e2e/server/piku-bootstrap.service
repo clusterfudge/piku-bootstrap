@@ -1,0 +1,12 @@
+[Unit]
+Description=Piku Bootstrap Service
+After=network.target sshd.service
+ConditionPathExists=!/root/.piku-bootstrap-complete
+
+[Service]
+Type=oneshot
+ExecStart=/root/bootstrap-piku.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
