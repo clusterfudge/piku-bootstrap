@@ -171,10 +171,10 @@ docker exec -it piku-e2e-tests-test-client-1 bash
 docker exec -it piku-e2e-tests-piku-server-1 bash
 
 # View logs
-docker-compose -p piku-e2e-tests logs -f
+docker compose -p piku-e2e-tests logs -f
 
 # Clean up manually
-docker-compose -p piku-e2e-tests down -v
+docker compose -p piku-e2e-tests down -v
 ```
 
 ### Server Inspection

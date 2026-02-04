@@ -47,7 +47,7 @@ DEBUGGING:
     After running with --keep, you can:
     - docker exec -it piku-e2e-tests-test-client-1 bash
     - docker exec -it piku-e2e-tests-piku-server-1 bash
-    - docker-compose -p $COMPOSE_PROJECT logs -f
+    - docker compose -p $COMPOSE_PROJECT logs -f
 EOF
 }
 
@@ -66,10 +66,10 @@ log_error() {
 cleanup() {
     if [ "$KEEP_CONTAINERS" = false ]; then
         log_info "Cleaning up containers..."
-        docker-compose -p "$COMPOSE_PROJECT" down -v --remove-orphans 2>/dev/null || true
+        docker compose -p "$COMPOSE_PROJECT" down -v --remove-orphans 2>/dev/null || true
     else
         log_warn "Containers kept running. Clean up with:"
-        echo "  docker-compose -p $COMPOSE_PROJECT down -v"
+        echo "  docker compose -p $COMPOSE_PROJECT down -v"
     fi
 }
 
@@ -116,7 +116,7 @@ log_info "Piku Repository: $PIKU_REPO"
 log_info "Piku Branch: $PIKU_BRANCH"
 [ -n "$TEST_FILTER" ] && log_info "Test Filter: $TEST_FILTER"
 
-# Export for docker-compose
+# Export for docker compose
 export PIKU_REPO
 export PIKU_BRANCH
 export COMPOSE_PROJECT
@@ -124,19 +124,19 @@ export COMPOSE_PROJECT
 # Build images
 if [ "$NO_BUILD" = false ]; then
     log_info "Building Docker images..."
-    docker-compose -p "$COMPOSE_PROJECT" build
+    docker compose -p "$COMPOSE_PROJECT" build
 fi
 
 # Start containers
 log_info "Starting containers (this may take a few minutes for piku bootstrap)..."
-docker-compose -p "$COMPOSE_PROJECT" up -d
+docker compose -p "$COMPOSE_PROJECT" up -d
 
 # Wait for piku-server to be healthy
 log_info "Waiting for piku-server to be ready..."
 TIMEOUT=600
 ELAPSED=0
 while [ $ELAPSED -lt $TIMEOUT ]; do
-    if docker-compose -p "$COMPOSE_PROJECT" ps piku-server | grep -q "healthy"; then
+    if docker compose -p "$COMPOSE_PROJECT" ps piku-server | grep -q "healthy"; then
         log_info "piku-server is ready!"
         break
     fi
@@ -148,13 +148,13 @@ echo
 
 if [ $ELAPSED -ge $TIMEOUT ]; then
     log_error "Timeout waiting for piku-server"
-    docker-compose -p "$COMPOSE_PROJECT" logs piku-server
+    docker compose -p "$COMPOSE_PROJECT" logs piku-server
     exit 1
 fi
 
 # Set up SSH on the client
 log_info "Setting up SSH keys on test client..."
-docker-compose -p "$COMPOSE_PROJECT" exec -T test-client bash -c '
+docker compose -p "$COMPOSE_PROJECT" exec -T test-client bash -c '
     cp /shared-keys/id_ed25519 /root/.ssh/
     chmod 600 /root/.ssh/id_ed25519
     ssh-keyscan -H piku-server >> /root/.ssh/known_hosts 2>/dev/null
@@ -183,7 +183,7 @@ for test_file in $TEST_FILES; do
     test_name=$(basename "$test_file" .sh)
     log_info "Running: $test_name"
     
-    if docker-compose -p "$COMPOSE_PROJECT" exec -T test-client bash -c "
+    if docker compose -p "$COMPOSE_PROJECT" exec -T test-client bash -c "
         source /lib/test_helpers.sh
         bash /$test_file
     "; then
