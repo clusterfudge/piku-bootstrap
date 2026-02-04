@@ -6,11 +6,11 @@ RUN apt-get update && apt-get install -y \
     git \
     openssh-client \
     jq \
-    coreutils \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh
 
 WORKDIR /tests
 
-CMD ["sleep", "infinity"]
+# Use tail instead of sleep for keeping container running
+CMD ["tail", "-f", "/dev/null"]

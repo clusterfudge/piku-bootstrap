@@ -74,7 +74,7 @@ export PIKU_REPO PIKU_BRANCH COMPOSE_PROJECT
 # Build images
 if [ "$NO_BUILD" = false ]; then
     log_info "Building Docker images..."
-    docker compose -p "$COMPOSE_PROJECT" build
+    docker compose -p "$COMPOSE_PROJECT" build --no-cache
 fi
 
 # Start piku-server only first
