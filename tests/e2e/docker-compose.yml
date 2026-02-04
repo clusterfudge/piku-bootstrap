@@ -1,13 +1,9 @@
-version: '3.8'
 
 services:
   piku-server:
     build:
       context: ../../
       dockerfile: tests/e2e/server/Dockerfile
-      args:
-        PIKU_REPO: ${PIKU_REPO:-piku/piku}
-        PIKU_BRANCH: ${PIKU_BRANCH:-master}
     hostname: piku-server
     privileged: true
     volumes:
@@ -16,6 +12,9 @@ services:
     cgroup: host
     networks:
       - piku-network
+    environment:
+      - PIKU_REPO=${PIKU_REPO:-piku/piku}
+      - PIKU_BRANCH=${PIKU_BRANCH:-master}
     healthcheck:
       test: ["CMD", "test", "-f", "/root/.piku-bootstrap-complete"]
       interval: 10s

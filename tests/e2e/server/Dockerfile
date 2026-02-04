@@ -1,8 +1,6 @@
 # Piku Server Dockerfile
 FROM jrei/systemd-ubuntu:22.04
 
-ARG PIKU_REPO=piku/piku
-ARG PIKU_BRANCH=master
 
 RUN apt-get update && apt-get install -y curl git openssh-server sudo && rm -rf /var/lib/apt/lists/*
 
@@ -20,5 +18,9 @@ COPY tests/e2e/server/piku-bootstrap.service /etc/systemd/system/piku-bootstrap.
 
 RUN systemctl enable ssh && systemctl enable piku-bootstrap
 
+# Create entrypoint that writes runtime env vars before starting systemd
+COPY tests/e2e/server/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 EXPOSE 22
-CMD ["/lib/systemd/systemd"]
+CMD ["/entrypoint.sh"]
