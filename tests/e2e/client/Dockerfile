@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y \
     git \
     openssh-client \
     jq \
+    coreutils \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh
