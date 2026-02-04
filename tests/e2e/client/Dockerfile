@@ -12,5 +12,5 @@ RUN mkdir -p /root/.ssh && chmod 700 /root/.ssh
 
 WORKDIR /tests
 
-# Use tail instead of sleep for keeping container running
-CMD ["tail", "-f", "/dev/null"]
+# Use shell form to avoid exec issues
+CMD bash -c "while true; do sleep 1000; done"
