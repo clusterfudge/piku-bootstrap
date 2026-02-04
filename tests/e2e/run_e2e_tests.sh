@@ -116,6 +116,15 @@ docker compose -p "$COMPOSE_PROJECT" exec -T piku-server bash -c '
 # Now start test-client
 log_info "Starting test-client container..."
 docker compose -p "$COMPOSE_PROJECT" up -d test-client
+sleep 3
+
+# Check if test-client is running
+if ! docker compose -p "$COMPOSE_PROJECT" ps test-client | grep -q "running"; then
+    log_error "test-client container failed to start!"
+    log_info "Container logs:"
+    docker compose -p "$COMPOSE_PROJECT" logs test-client
+    exit 1
+fi
 
 # Set up SSH on the client
 log_info "Configuring test client..."
