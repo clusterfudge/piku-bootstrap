@@ -12,10 +12,10 @@ TEST_FILTER=""
 PIKU_REPO="${PIKU_REPO:-piku/piku}"
 PIKU_BRANCH="${PIKU_BRANCH:-master}"
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+RED='[0;31m'
+GREEN='[0;32m'
+YELLOW='[1;33m'
+NC='[0m'
 
 usage() {
     cat << 'USAGE'
@@ -112,6 +112,15 @@ docker compose -p "$COMPOSE_PROJECT" exec -T piku-server bash -c '
     chmod 600 /shared-keys/id_ed25519
     cat /root/.ssh/id_ed25519.pub | sudo -u piku tee -a /home/piku/.ssh/authorized_keys > /dev/null
 '
+# Wait for SSH to be fully ready
+log_info "Waiting for SSH to be ready..."
+for i in $(seq 1 30); do
+    if docker compose -p "$COMPOSE_PROJECT" exec -T piku-server ssh -o StrictHostKeyChecking=no -o BatchMode=yes localhost exit 2>/dev/null; then
+        log_info "SSH is ready"
+        break
+    fi
+    sleep 2
+done
 
 # Now start test-client
 log_info "Starting test-client container..."
@@ -135,7 +144,6 @@ docker compose -p "$COMPOSE_PROJECT" exec -T test-client bash -c '
     git config --global user.email "test@piku.test"
     git config --global user.name "Piku Test"
 '
-
 # Run tests
 log_info "Running tests..."
 TESTS_PASSED=0

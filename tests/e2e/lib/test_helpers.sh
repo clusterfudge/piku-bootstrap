@@ -71,7 +71,7 @@ create_app() {
     rm -rf "$app_dir"
     mkdir -p "$app_dir"
     cd "$app_dir"
-    git init
+    git init > /dev/null 2>&1
     
     echo "$app_dir"
 }
