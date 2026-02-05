@@ -219,7 +219,6 @@ create_flask_app() {
     
     cat > "$app_dir/requirements.txt" << EOF
 flask
-gunicorn
 $extra_deps
 EOF
 
@@ -234,10 +233,13 @@ def hello():
 @app.route('/health')
 def health():
     return 'OK'
+
+# WSGI entry point for uwsgi
+application = app
 EOF
 
     cat > "$app_dir/Procfile" << 'EOF'
-wsgi: gunicorn wsgi:app -b 0.0.0.0:$PORT
+wsgi: wsgi:app
 EOF
 }
 
