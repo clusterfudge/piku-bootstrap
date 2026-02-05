@@ -1,7 +1,7 @@
 #!/bin/bash
 # Test Python UV deployments with pyproject.toml
 # Migrated from original test_uv_e2e.sh
-source /lib/test_helpers.sh
+source /test-lib/test_helpers.sh
 
 #######################################
 # Test 1: Basic UV deployment

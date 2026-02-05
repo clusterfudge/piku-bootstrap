@@ -157,7 +157,7 @@ for test_file in $TEST_FILES; do
     test_name=$(basename "$test_file" .sh)
     log_info "Running: $test_name"
     
-    if docker compose -p "$COMPOSE_PROJECT" exec -T test-client bash -c "source /lib/test_helpers.sh && bash /$test_file"; then
+    if docker compose -p "$COMPOSE_PROJECT" exec -T test-client bash -c "source /test-lib/test_helpers.sh && bash /$test_file"; then
         log_info "PASSED: $test_name"
         TESTS_PASSED=$((TESTS_PASSED + 1))
     else

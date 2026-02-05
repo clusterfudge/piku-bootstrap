@@ -21,7 +21,7 @@ services:
       - piku-network
     volumes:
       - ./tests:/tests:ro
-      - ./lib:/lib:ro
+      - ./lib:/test-lib:ro
       - shared-keys:/shared-keys:ro
     environment:
       - PIKU_SERVER=piku-server

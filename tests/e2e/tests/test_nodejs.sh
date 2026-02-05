@@ -1,6 +1,6 @@
 #!/bin/bash
 # Test Node.js deployments with package.json
-source /lib/test_helpers.sh
+source /test-lib/test_helpers.sh
 
 #######################################
 # Test 1: Basic Express app

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Test traditional Python deployments with pip/requirements.txt
-source /lib/test_helpers.sh
+source /test-lib/test_helpers.sh
 
 #######################################
 # Test 1: Basic Flask app with requirements.txt

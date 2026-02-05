@@ -102,7 +102,7 @@ Create a new file in `tests/` named `test_<category>.sh`:
 
 ```bash
 #!/bin/bash
-source /lib/test_helpers.sh
+source /test-lib/test_helpers.sh
 
 # Test function
 test_my_feature() {

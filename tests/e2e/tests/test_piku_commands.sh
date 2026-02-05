@@ -1,6 +1,6 @@
 #!/bin/bash
 # Test piku CLI commands
-source /lib/test_helpers.sh
+source /test-lib/test_helpers.sh
 
 # Deploy a test app first that we'll use for all command tests
 APP_NAME="test-piku-commands"

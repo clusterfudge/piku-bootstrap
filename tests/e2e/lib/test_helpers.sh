@@ -1,6 +1,6 @@
 #!/bin/bash
 # Test Helper Library for Piku E2E Tests
-# Source this file in test scripts: source /lib/test_helpers.sh
+# Source this file in test scripts: source /test-lib/test_helpers.sh
 
 set -e
 
