@@ -103,9 +103,29 @@ wait_for_app() {
     
     log_info "Waiting for $app_name to be ready..."
     
+    # First wait for uwsgi config to exist
     while [ $elapsed -lt $timeout ]; do
         if ssh_server "ls /home/piku/.piku/uwsgi-enabled/${app_name}*.ini >/dev/null 2>&1"; then
-            log_info "$app_name is ready"
+            break
+        fi
+        sleep 5
+        elapsed=$((elapsed + 5))
+    done
+    
+    if [ $elapsed -ge $timeout ]; then
+        log_fail "Timeout waiting for $app_name uwsgi config"
+        return 1
+    fi
+    
+    # Give uwsgi time to start the process
+    sleep 10
+    
+    # Now wait for the app to actually respond (not 403)
+    while [ $elapsed -lt $timeout ]; do
+        local http_code
+        http_code=$(ssh_server "curl -s -o /dev/null -w '%{http_code}' http://localhost -H 'Host: $app_name'" 2>/dev/null || echo "000")
+        if [ "$http_code" != "403" ] && [ "$http_code" != "000" ] && [ "$http_code" != "502" ]; then
+            log_info "$app_name is ready (HTTP $http_code)"
             return 0
         fi
         sleep 5
