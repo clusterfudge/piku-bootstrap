@@ -83,7 +83,7 @@ docker compose -p "$COMPOSE_PROJECT" up -d piku-server
 
 # Wait for systemd to be ready
 log_info "Waiting for systemd to start..."
-for i in $(seq 1 30); do
+for i in $(seq 1 60); do
     if docker compose -p "$COMPOSE_PROJECT" exec -T piku-server systemctl is-system-running --wait 2>/dev/null | grep -qE "(running|degraded)"; then
         log_info "Systemd is ready"
         break
@@ -113,10 +113,10 @@ docker compose -p "$COMPOSE_PROJECT" exec -T piku-server bash -c '
     cat /root/.ssh/id_ed25519.pub | sudo -u piku tee -a /home/piku/.ssh/authorized_keys > /dev/null
 '
 # Wait for SSH to be fully ready
-log_info "Waiting for SSH to be ready..."
-for i in $(seq 1 30); do
-    if docker compose -p "$COMPOSE_PROJECT" exec -T piku-server ssh -o StrictHostKeyChecking=no -o BatchMode=yes localhost exit 2>/dev/null; then
-        log_info "SSH is ready"
+log_info "Waiting for system boot to complete..."
+for i in $(seq 1 60); do
+    if docker compose -p "$COMPOSE_PROJECT" exec -T piku-server test ! -f /run/nologin 2>/dev/null; then
+        log_info "System boot complete"
         break
     fi
     sleep 2
