@@ -119,7 +119,7 @@ docker compose -p "$COMPOSE_PROJECT" up -d test-client
 sleep 3
 
 # Check if test-client is running
-if ! docker compose -p "$COMPOSE_PROJECT" ps test-client | grep -q "running"; then
+if ! docker compose -p "$COMPOSE_PROJECT" ps test-client --format "{{.Status}}" | grep -qE "Up|running"; then
     log_error "test-client container failed to start!"
     log_info "Container logs:"
     docker compose -p "$COMPOSE_PROJECT" logs test-client
