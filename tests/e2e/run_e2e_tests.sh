@@ -115,7 +115,7 @@ docker compose -p "$COMPOSE_PROJECT" exec -T piku-server bash -c '
 # Wait for SSH to be fully ready
 log_info "Waiting for system boot to complete..."
 for i in $(seq 1 60); do
-    if docker compose -p "$COMPOSE_PROJECT" exec -T piku-server test ! -f /run/nologin 2>/dev/null; then
+    if docker compose -p "$COMPOSE_PROJECT" exec -T piku-server systemctl is-active systemd-user-sessions.service 2>/dev/null; then
         log_info "System boot complete"
         break
     fi
