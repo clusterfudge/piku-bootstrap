@@ -104,7 +104,7 @@ wait_for_app() {
     log_info "Waiting for $app_name to be ready..."
     
     while [ $elapsed -lt $timeout ]; do
-        if ssh_server "test -f /home/piku/.piku/uwsgi-enabled/$app_name.ini"; then
+        if ssh_server "ls /home/piku/.piku/uwsgi-enabled/${app_name}*.ini >/dev/null 2>&1"; then
             log_info "$app_name is ready"
             return 0
         fi
