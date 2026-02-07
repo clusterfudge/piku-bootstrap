@@ -133,6 +133,14 @@ wait_for_app() {
     done
     
     log_fail "Timeout waiting for $app_name"
+    # Debug output on timeout
+    log_info "=== Debug info for $app_name ==="
+    ssh_server "ls -la /home/piku/.piku/uwsgi-enabled/" || true
+    ssh_server "ls -la /home/piku/.piku/nginx/" || true
+    ssh_server "systemctl status uwsgi-piku" || true
+    ssh_server "cat /home/piku/.piku/uwsgi/uwsgi.log | tail -30" || true
+    ssh_server "cat /home/piku/.piku/logs/${app_name}/*.log | tail -20" 2>/dev/null || true
+    log_info "=== End debug info ==="
     return 1
 }
 
