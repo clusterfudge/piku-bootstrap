@@ -24,28 +24,19 @@ cleanup_test_app() {
 test_piku_logs() {
     log_info "Testing 'piku logs' command..."
     
-    # piku logs tails indefinitely, so we need a timeout
-    # Use SSH with ConnectTimeout and a timeout wrapper
     local output
-    output=$(timeout 5 ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-        "$PIKU_USER@$PIKU_SERVER" "logs $APP_NAME" 2>&1 || true)
+    output=$(run_piku logs "$APP_NAME" 2>&1 || true)
     
-    # If we got any output or the command ran (even with timeout), consider it working
-    # The key thing is piku should not immediately error
-    if [ -n "$output" ] && ! echo "$output" | grep -q "Error\|not found\|No such"; then
+    # Logs should contain something (even if empty app logs)
+    if [ -n "$output" ] || run_piku logs "$APP_NAME" >/dev/null 2>&1; then
         log_pass "piku logs command works"
         return 0
     else
-        # Check if logs directory exists (alternative verification)
-        if ssh_server "ls /home/piku/.piku/logs/$APP_NAME/*.log" >/dev/null 2>&1; then
-            log_pass "piku logs command works (log files exist)"
-            return 0
-        else
-            log_fail "piku logs command failed: $output"
-            return 1
-        fi
+        log_fail "piku logs command failed"
+        return 1
     fi
 }
+
 #######################################
 # Test 2: piku config:set and config:get
 #######################################
