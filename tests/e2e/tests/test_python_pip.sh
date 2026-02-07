@@ -134,6 +134,10 @@ EOF
     cat > "$app_dir/Procfile" << 'EOF'
 web: python app.py
 EOF
+
+    cat > "$app_dir/ENV" << EOF
+NGINX_SERVER_NAME=$app_name
+EOF
     
     log_info "Deploying app..."
     deploy_app "$app_name"

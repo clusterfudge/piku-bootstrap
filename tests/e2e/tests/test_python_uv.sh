@@ -59,8 +59,9 @@ EOF
 wsgi: flask run -h 0.0.0.0 -p $PORT
 EOF
 
-    cat > "$app_dir/ENV" << 'EOF'
+    cat > "$app_dir/ENV" << EOF
 PYTHON_VERSION=3.10
+NGINX_SERVER_NAME=$app_name
 EOF
     
     log_info "Deploying app..."
@@ -158,8 +159,9 @@ EOF
 wsgi: flask run -h 0.0.0.0 -p $PORT
 EOF
 
-    cat > "$app_dir/ENV" << 'EOF'
+    cat > "$app_dir/ENV" << EOF
 PYTHON_VERSION=3.11
+NGINX_SERVER_NAME=$app_name
 EOF
     
     log_info "Deploying app..."
@@ -209,8 +211,9 @@ EOF
 wsgi: flask run -h 0.0.0.0 -p $PORT
 EOF
 
-    cat > "$app_dir/ENV" << 'EOF'
+    cat > "$app_dir/ENV" << EOF
 PYTHON_VERSION=3.11
+NGINX_SERVER_NAME=$app_name
 EOF
     
     log_info "First deploy (without requests)..."
@@ -275,8 +278,9 @@ EOF
     echo "3.11" > "$app_dir/.python-version"
     
     # ENV says 3.10 - this should take priority
-    cat > "$app_dir/ENV" << 'EOF'
+    cat > "$app_dir/ENV" << EOF
 PYTHON_VERSION=3.10
+NGINX_SERVER_NAME=$app_name
 EOF
     
     log_info "Deploying app..."
