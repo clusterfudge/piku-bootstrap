@@ -119,30 +119,30 @@ test_piku_ps() {
 }
 
 #######################################
-# Test 5: piku stop and start
+# Test 5: piku stop and restart
 #######################################
-test_piku_stop_start() {
-    log_info "Testing 'piku stop' and 'piku start' commands..."
+test_piku_stop_restart() {
+    log_info "Testing 'piku stop' and 'piku restart' commands..."
     
     # Stop the app
     log_info "Stopping app..."
     run_piku stop "$APP_NAME" 2>&1 || true
     sleep 3
     
-    # Start the app
-    log_info "Starting app..."
-    run_piku start "$APP_NAME" 2>&1 || true
+    # Restart the app (piku doesn't have a separate 'start' command)
+    log_info "Restarting app..."
+    run_piku restart "$APP_NAME" 2>&1 || true
     
-    # Wait for app to become ready (may take some time after start)
+    # Wait for app to become ready (may take some time after restart)
     wait_for_app "$APP_NAME" 60 || true
     sleep 5
     
     # Verify app is responding
     if test_http "$APP_NAME" "Hello"; then
-        log_pass "piku stop/start works"
+        log_pass "piku stop/restart works"
         return 0
     else
-        log_fail "App not responding after stop/start"
+        log_fail "App not responding after stop/restart"
         return 1
     fi
 }
@@ -192,7 +192,7 @@ run_test "piku logs" test_piku_logs
 run_test "piku config:set/get" test_piku_config
 run_test "piku restart" test_piku_restart
 run_test "piku ps" test_piku_ps
-run_test "piku stop/start" test_piku_stop_start
+run_test "piku stop/restart" test_piku_stop_restart
 run_test "piku destroy" test_piku_destroy
 
 # Cleanup
