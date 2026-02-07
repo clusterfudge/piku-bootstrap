@@ -225,9 +225,17 @@ create_flask_app() {
     local app_dir="$1"
     local extra_deps="${2:-}"
     
+    # Extract app name from path (last component)
+    local app_name=$(basename "$app_dir")
+    
     cat > "$app_dir/requirements.txt" << EOF
 flask
 $extra_deps
+EOF
+
+    # Add ENV file with SERVER_NAME for nginx virtual host
+    cat > "$app_dir/ENV" << EOF
+NGINX_SERVER_NAME=$app_name
 EOF
 
     cat > "$app_dir/wsgi.py" << 'EOF'
@@ -256,6 +264,7 @@ EOF
 create_uv_flask_app() {
     local app_dir="$1"
     local python_version="${2:-3.11}"
+    local app_name=$(basename "$app_dir")
     
     cat > "$app_dir/pyproject.toml" << EOF
 [project]
@@ -282,6 +291,7 @@ EOF
 
     cat > "$app_dir/ENV" << EOF
 PYTHON_VERSION=$python_version
+NGINX_SERVER_NAME=$app_name
 EOF
 }
 
@@ -290,6 +300,7 @@ EOF
 create_node_app() {
     local app_dir="$1"
     local node_version="${2:-18}"
+    local app_name=$(basename "$app_dir")
     
     cat > "$app_dir/package.json" << EOF
 {
@@ -328,6 +339,10 @@ EOF
 
     cat > "$app_dir/Procfile" << 'EOF'
 web: node index.js
+EOF
+
+    cat > "$app_dir/ENV" << EOF
+NGINX_SERVER_NAME=$app_name
 EOF
 }
 
