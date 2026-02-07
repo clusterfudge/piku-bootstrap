@@ -132,6 +132,9 @@ test_piku_stop_start() {
     # Start the app
     log_info "Starting app..."
     run_piku start "$APP_NAME" 2>&1 || true
+    
+    # Wait for app to become ready (may take some time after start)
+    wait_for_app "$APP_NAME" 60 || true
     sleep 5
     
     # Verify app is responding
