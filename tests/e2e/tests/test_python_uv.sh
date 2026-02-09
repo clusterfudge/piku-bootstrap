@@ -53,10 +53,12 @@ app = Flask(__name__)
 @app.route('/')
 def hello():
     return f'Python {sys.version_info.major}.{sys.version_info.minor}'
+
+application = app
 EOF
 
     cat > "$app_dir/Procfile" << 'EOF'
-wsgi: flask run -h 0.0.0.0 -p $PORT
+wsgi: wsgi:app
 EOF
 
     cat > "$app_dir/ENV" << EOF
@@ -102,10 +104,12 @@ app = Flask(__name__)
 @app.route('/')
 def hello():
     return f'Python {sys.version_info.major}.{sys.version_info.minor}'
+
+application = app
 EOF
 
     cat > "$app_dir/Procfile" << 'EOF'
-wsgi: flask run -h 0.0.0.0 -p $PORT
+wsgi: wsgi:app
 EOF
 
     echo "3.10" > "$app_dir/.python-version"
@@ -153,10 +157,12 @@ app = Flask(__name__)
 @app.route('/')
 def hello():
     return f'UV deps: requests={requests.__version__}, click={click.__version__}'
+
+application = app
 EOF
 
     cat > "$app_dir/Procfile" << 'EOF'
-wsgi: flask run -h 0.0.0.0 -p $PORT
+wsgi: wsgi:app
 EOF
 
     cat > "$app_dir/ENV" << EOF
@@ -205,10 +211,12 @@ def hello():
         return f'Has requests: {requests.__version__}'
     except ImportError:
         return 'No requests'
+
+application = app
 EOF
 
     cat > "$app_dir/Procfile" << 'EOF'
-wsgi: flask run -h 0.0.0.0 -p $PORT
+wsgi: wsgi:app
 EOF
 
     cat > "$app_dir/ENV" << EOF
@@ -268,10 +276,12 @@ app = Flask(__name__)
 @app.route('/')
 def hello():
     return f'Python {sys.version_info.major}.{sys.version_info.minor}'
+
+application = app
 EOF
 
     cat > "$app_dir/Procfile" << 'EOF'
-wsgi: flask run -h 0.0.0.0 -p $PORT
+wsgi: wsgi:app
 EOF
 
     # .python-version says 3.10
