@@ -17,8 +17,8 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
 
 # Install uv (for Python UV support)
 # uv is a fast Python package installer that piku can use
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
-    && ln -s /root/.local/bin/uv /usr/local/bin/uv
+# Install directly to /usr/local/bin so it's available to all users (including piku)
+RUN curl -LsSf https://astral.sh/uv/install.sh | env CARGO_HOME=/usr/local UV_INSTALL_DIR=/usr/local/bin sh
 
 # Configure SSH
 RUN mkdir -p /var/run/sshd
