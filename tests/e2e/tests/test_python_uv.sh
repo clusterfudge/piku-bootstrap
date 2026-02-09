@@ -113,6 +113,10 @@ wsgi: wsgi:app
 EOF
 
     echo "3.10" > "$app_dir/.python-version"
+
+    cat > "$app_dir/ENV" << EOF
+NGINX_SERVER_NAME=$app_name
+EOF
     
     log_info "Deploying app..."
     deploy_app "$app_name"
@@ -286,6 +290,10 @@ EOF
 
     # .python-version says 3.10
     echo "3.10" > "$app_dir/.python-version"
+
+    cat > "$app_dir/ENV" << EOF
+NGINX_SERVER_NAME=$app_name
+EOF
     
     # ENV says 3.10 - this should take priority
     cat > "$app_dir/ENV" << EOF
