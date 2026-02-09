@@ -101,37 +101,14 @@
     piku_branch: "{{ piku_branch | default('master', true) }}"
     piku_raw_url: "https://raw.githubusercontent.com/{{ piku_repo }}/{{ piku_branch }}"
   tasks:
-    - name: Debug curl URL
-      shell: |
-        echo "PIKU_REPO={{ piku_repo }}"
-        echo "PIKU_BRANCH={{ piku_branch }}"
-        echo "URL=https://api.github.com/repos/{{ piku_repo }}/contents/piku.py?ref={{ piku_branch }}"
-      register: debug_url
-
-    - name: Show debug URL
-      debug:
-        var: debug_url.stdout_lines
-
     # Note: Using GitHub API instead of raw.githubusercontent.com to bypass CDN caching
     # GitHub's CDN caches raw content aggressively and ignores query parameters
     - name: Fetch piku.py script
       shell: |
-        echo "DEBUG: Fetching piku.py from repo={{ piku_repo }} branch={{ piku_branch }}"
         curl -fsSL "https://api.github.com/repos/{{ piku_repo }}/contents/piku.py?ref={{ piku_branch }}" \
           -H "Accept: application/vnd.github.v3.raw" \
-          -o ~/piku.py \
-          -w "DEBUG: curl status=%{http_code}\n" || echo "DEBUG: curl failed with exit code $?"
-        if [ -f ~/piku.py ]; then
-          chmod 0700 ~/piku.py
-          echo "DEBUG: piku.py has $(wc -l < ~/piku.py) lines"
-        else
-          echo "DEBUG: piku.py file not found!"
-        fi
-      register: fetch_result
-
-    - name: Show fetch output
-      debug:
-        var: fetch_result.stdout_lines
+          -o ~/piku.py
+        chmod 0700 ~/piku.py
 
     - name: Run piku setup
       shell: python3 ~/piku.py setup
