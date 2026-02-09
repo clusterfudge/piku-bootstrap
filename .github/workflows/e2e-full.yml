@@ -41,6 +41,10 @@ jobs:
           chmod +x run_e2e_tests.sh
           if [ -n "$TEST_FILTER" ]; then
             ./run_e2e_tests.sh "$TEST_FILTER"
+          elif [ "$PIKU_REPO" = "piku/piku" ] && [ "$PIKU_BRANCH" = "master" ]; then
+            # Skip python_uv tests when using piku/piku master (no UV support)
+            echo "Skipping python_uv tests (piku/piku master does not support UV)"
+            ./run_e2e_tests.sh nodejs python_pip piku_commands
           else
             ./run_e2e_tests.sh
           fi
