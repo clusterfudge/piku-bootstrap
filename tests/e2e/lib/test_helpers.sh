@@ -283,10 +283,13 @@ app = Flask(__name__)
 @app.route('/')
 def hello():
     return 'Hello from UV Flask!'
+
+# WSGI entry point for uwsgi
+application = app
 EOF
 
     cat > "$app_dir/Procfile" << 'EOF'
-wsgi: flask run -h 0.0.0.0 -p $PORT
+wsgi: wsgi:app
 EOF
 
     cat > "$app_dir/ENV" << EOF

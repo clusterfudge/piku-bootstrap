@@ -119,9 +119,14 @@
         echo "DEBUG: Fetching piku.py from repo={{ piku_repo }} branch={{ piku_branch }}"
         curl -fsSL "https://api.github.com/repos/{{ piku_repo }}/contents/piku.py?ref={{ piku_branch }}" \
           -H "Accept: application/vnd.github.v3.raw" \
-          -o ~/piku.py
-        chmod 0700 ~/piku.py
-        echo "DEBUG: piku.py has $(wc -l < ~/piku.py) lines"
+          -o ~/piku.py \
+          -w "DEBUG: curl status=%{http_code}\n" || echo "DEBUG: curl failed with exit code $?"
+        if [ -f ~/piku.py ]; then
+          chmod 0700 ~/piku.py
+          echo "DEBUG: piku.py has $(wc -l < ~/piku.py) lines"
+        else
+          echo "DEBUG: piku.py file not found!"
+        fi
       register: fetch_result
 
     - name: Show fetch output
