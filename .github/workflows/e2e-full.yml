@@ -65,6 +65,8 @@ jobs:
           PIKU_REPO: ${{ github.event.inputs.piku_repo || 'piku/piku' }}
           PIKU_BRANCH: ${{ github.event.inputs.piku_branch || 'master' }}
 
+  # This job uses a different piku branch that includes UV support fixes
+  # (clusterfudge/piku:claude/fix-piku-uv-support-ILtq9) until merged upstream
   e2e-python-uv:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -79,8 +81,9 @@ jobs:
           chmod +x run_e2e_tests.sh
           ./run_e2e_tests.sh python_uv
         env:
-          PIKU_REPO: ${{ github.event.inputs.piku_repo || 'piku/piku' }}
-          PIKU_BRANCH: ${{ github.event.inputs.piku_branch || 'master' }}
+          # Use clusterfudge/piku with UV fixes until merged upstream
+          PIKU_REPO: ${{ github.event.inputs.piku_repo || 'clusterfudge/piku' }}
+          PIKU_BRANCH: ${{ github.event.inputs.piku_branch || 'claude/fix-piku-uv-support-ILtq9' }}
 
   e2e-nodejs:
     runs-on: ubuntu-latest
