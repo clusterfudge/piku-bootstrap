@@ -263,7 +263,7 @@ EOF
 # Usage: create_uv_flask_app <app_dir> [python_version]
 create_uv_flask_app() {
     local app_dir="$1"
-    local python_version="${2:-3.11}"
+    local python_version="${2:-3.10}"
     local app_name=$(basename "$app_dir")
     
     cat > "$app_dir/pyproject.toml" << EOF

@@ -11,7 +11,7 @@ test_basic_uv() {
     
     log_info "Creating basic UV Flask app..."
     local app_dir=$(create_app "$app_name")
-    create_uv_flask_app "$app_dir" "3.11"
+    create_uv_flask_app "$app_dir" "3.10"
     
     log_info "Deploying app..."
     deploy_app "$app_name"
@@ -108,7 +108,7 @@ EOF
 wsgi: flask run -h 0.0.0.0 -p $PORT
 EOF
 
-    echo "3.11" > "$app_dir/.python-version"
+    echo "3.10" > "$app_dir/.python-version"
     
     log_info "Deploying app..."
     deploy_app "$app_name"
@@ -116,7 +116,7 @@ EOF
     sleep 5
     
     log_info "Testing HTTP response..."
-    test_http "$app_name" "Python 3.11"
+    test_http "$app_name" "Python 3.10"
     
     local result=$?
     destroy_app "$app_name"
@@ -160,7 +160,7 @@ wsgi: flask run -h 0.0.0.0 -p $PORT
 EOF
 
     cat > "$app_dir/ENV" << EOF
-PYTHON_VERSION=3.11
+PYTHON_VERSION=3.10
 NGINX_SERVER_NAME=$app_name
 EOF
     
@@ -212,7 +212,7 @@ wsgi: flask run -h 0.0.0.0 -p $PORT
 EOF
 
     cat > "$app_dir/ENV" << EOF
-PYTHON_VERSION=3.11
+PYTHON_VERSION=3.10
 NGINX_SERVER_NAME=$app_name
 EOF
     
@@ -274,8 +274,8 @@ EOF
 wsgi: flask run -h 0.0.0.0 -p $PORT
 EOF
 
-    # .python-version says 3.11
-    echo "3.11" > "$app_dir/.python-version"
+    # .python-version says 3.10
+    echo "3.10" > "$app_dir/.python-version"
     
     # ENV says 3.10 - this should take priority
     cat > "$app_dir/ENV" << EOF
