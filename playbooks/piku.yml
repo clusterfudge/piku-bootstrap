@@ -110,6 +110,10 @@
           -o ~/piku.py
         chmod 0700 ~/piku.py
 
+    - name: Debug piku source
+      debug:
+        msg: "Fetched piku.py from repo={{ piku_repo }} branch={{ piku_branch }}"
+
     - name: Run piku setup
       shell: python3 ~/piku.py setup
       args:
