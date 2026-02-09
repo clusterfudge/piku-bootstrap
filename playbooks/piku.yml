@@ -105,11 +105,12 @@
     # GitHub's CDN caches raw content aggressively and ignores query parameters
     - name: Fetch piku.py script
       shell: |
+        echo "DEBUG: Fetching piku.py from repo={{ piku_repo }} branch={{ piku_branch }}"
         curl -fsSL "https://api.github.com/repos/{{ piku_repo }}/contents/piku.py?ref={{ piku_branch }}" \
           -H "Accept: application/vnd.github.v3.raw" \
           -o ~/piku.py
         chmod 0700 ~/piku.py
-
+        echo "DEBUG: piku.py has $(wc -l < ~/piku.py) lines"
     - name: Debug piku source
       debug:
         msg: "Fetched piku.py from repo={{ piku_repo }} branch={{ piku_branch }}"
