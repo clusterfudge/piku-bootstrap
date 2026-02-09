@@ -111,11 +111,9 @@
           -o ~/piku.py
         chmod 0700 ~/piku.py
         echo "DEBUG: piku.py has $(wc -l < ~/piku.py) lines"
-      register: fetch_result
-
-    - name: Show fetch output
+    - name: Debug piku source
       debug:
-        var: fetch_result.stdout_lines
+        msg: "Fetched piku.py from repo={{ piku_repo }} branch={{ piku_branch }}"
 
     - name: Run piku setup
       shell: python3 ~/piku.py setup
