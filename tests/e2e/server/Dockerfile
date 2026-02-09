@@ -27,9 +27,14 @@ RUN sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/s
 RUN sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config
 RUN ssh-keygen -A
 
-COPY piku-bootstrap /root/piku-bootstrap
-COPY playbooks /root/playbooks
+# Copy piku-bootstrap files to the location where the script expects them
+# This prevents the script from cloning the upstream repo during first-run
+RUN mkdir -p /root/.piku-bootstrap/piku-bootstrap
+COPY piku-bootstrap /root/.piku-bootstrap/piku-bootstrap/piku-bootstrap
+COPY playbooks /root/.piku-bootstrap/piku-bootstrap/playbooks
 
+# Also keep a copy in /root for easy access
+COPY piku-bootstrap /root/piku-bootstrap
 RUN systemctl enable ssh
 
 EXPOSE 22
