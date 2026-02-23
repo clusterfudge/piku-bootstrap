@@ -103,12 +103,14 @@
     piku_branch: "master"
     piku_raw_url: "https://raw.githubusercontent.com/{{ piku_repo }}/{{ piku_branch }}"
   tasks:
-    # Note: Using GitHub API instead of raw.githubusercontent.com to bypass CDN caching
-    # GitHub's CDN caches raw content aggressively and ignores query parameters
+    # Try GitHub API first (bypasses CDN caching), fall back to raw.githubusercontent.com
+    # if rate-limited (unauthenticated API allows only 60 requests/hour per IP)
     - name: Fetch piku.py script
       shell: |
         curl -fsSL "https://api.github.com/repos/{{ piku_repo }}/contents/piku.py?ref={{ piku_branch }}" \
           -H "Accept: application/vnd.github.v3.raw" \
+          -o ~/piku.py \
+        || curl -fsSL "https://raw.githubusercontent.com/{{ piku_repo }}/{{ piku_branch }}/piku.py" \
           -o ~/piku.py
         chmod 0700 ~/piku.py
 
