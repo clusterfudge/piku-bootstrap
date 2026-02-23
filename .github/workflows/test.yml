@@ -8,6 +8,7 @@ jobs:
       LANG: C.UTF-8
       TZ: Europe/London
     strategy:
+      fail-fast: false
       matrix:
         version: ["ubuntu:22.04", "ubuntu:20.04", "debian:trixie"]
     container:
