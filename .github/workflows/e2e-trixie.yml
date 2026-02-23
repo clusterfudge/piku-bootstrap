@@ -16,11 +16,12 @@ on:
       piku_repo:
         description: 'Piku repository (owner/repo)'
         required: false
-        default: 'piku/piku'
+        # Use clusterfudge/piku fork with nginx http2 fix until merged upstream
+        default: 'clusterfudge/piku'
       piku_branch:
         description: 'Piku branch'
         required: false
-        default: 'master'
+        default: 'fix/nginx-http2-trixie'
       test_filter:
         description: 'Test filter pattern (e.g., "python", "nodejs")'
         required: false
@@ -72,7 +73,7 @@ jobs:
         run: |
           cd tests/e2e
           docker compose -p piku-trixie-install exec -T piku-server \
-            bash -c "cd /root && ./piku-bootstrap install --piku-repo=${{ github.event.inputs.piku_repo || 'piku/piku' }} --piku-branch=${{ github.event.inputs.piku_branch || 'master' }}"
+            bash -c "cd /root && ./piku-bootstrap install --piku-repo=${{ github.event.inputs.piku_repo || 'clusterfudge/piku' }} --piku-branch=${{ github.event.inputs.piku_branch || 'fix/nginx-http2-trixie' }}"
         env:
           SERVER_DOCKERFILE: tests/e2e/server/Dockerfile.trixie
 
@@ -131,5 +132,6 @@ jobs:
             ./run_e2e_tests.sh --distro=trixie
           fi
         env:
-          PIKU_REPO: ${{ github.event.inputs.piku_repo || 'piku/piku' }}
-          PIKU_BRANCH: ${{ github.event.inputs.piku_branch || 'master' }}
+          # Use clusterfudge/piku fork with nginx http2 fix until merged upstream
+          PIKU_REPO: ${{ github.event.inputs.piku_repo || 'clusterfudge/piku' }}
+          PIKU_BRANCH: ${{ github.event.inputs.piku_branch || 'fix/nginx-http2-trixie' }}
