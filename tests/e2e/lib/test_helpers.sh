@@ -143,10 +143,20 @@ wait_for_app() {
     ssh_server "systemctl status piku-nginx.service" || true
     ssh_server "cat /home/piku/.piku/uwsgi/uwsgi.log | tail -30" || true
     ssh_server "cat /home/piku/.piku/logs/${app_name}/*.log | tail -20" 2>/dev/null || true
-    ssh_server "cat /var/log/nginx/error.log 2>/dev/null | tail -30 || journalctl -u nginx --no-pager -n 30 2>/dev/null" || true
-    ssh_server "cat /home/piku/.piku/nginx/${app_name}.conf" 2>/dev/null || true
-    ssh_server "nginx -T 2>&1 | grep -A 5 'upstream ${app_name}'" 2>/dev/null || true
-    ssh_server "curl -v http://localhost -H 'Host: ${app_name}' 2>&1" 2>/dev/null || true
+    log_info "--- nginx error log ---"
+    ssh_server "tail -30 /var/log/nginx/error.log" || true
+    log_info "--- journalctl nginx ---"
+    ssh_server "journalctl -u nginx --no-pager -n 30" || true
+    log_info "--- app nginx config ---"
+    ssh_server "cat /home/piku/.piku/nginx/${app_name}.conf" || true
+    log_info "--- nginx upstream for ${app_name} ---"
+    ssh_server "nginx -T 2>&1 | grep -A 5 'upstream ${app_name}'" || true
+    log_info "--- curl -v test ---"
+    ssh_server "curl -v http://localhost -H 'Host: ${app_name}' 2>&1" || true
+    log_info "--- uwsgi vassal ini ---"
+    ssh_server "cat /home/piku/.piku/uwsgi-available/${app_name}*.ini" || true
+    log_info "--- app logs ---"
+    ssh_server "ls -la /home/piku/.piku/logs/${app_name}/ && cat /home/piku/.piku/logs/${app_name}/*.log" || true
     log_info "=== End debug info ==="
     return 1
 }
