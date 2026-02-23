@@ -278,6 +278,9 @@ EOF
 
 # Create a basic Flask app with pyproject.toml (UV)
 # Usage: create_uv_flask_app <app_dir> [python_version]
+# Note: python_version sets requires-python in pyproject.toml.
+# PYTHON_VERSION is NOT set in ENV to avoid uv downloading a managed
+# Python that mismatches the uwsgi plugin's system Python.
 create_uv_flask_app() {
     local app_dir="$1"
     local python_version="${2:-3.10}"
@@ -310,7 +313,6 @@ wsgi: wsgi:app
 EOF
 
     cat > "$app_dir/ENV" << EOF
-PYTHON_VERSION=$python_version
 NGINX_SERVER_NAME=$app_name
 EOF
 }
