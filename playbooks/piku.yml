@@ -181,8 +181,8 @@
     piku_raw_url: "https://raw.githubusercontent.com/{{ piku_repo }}/{{ piku_branch }}"
   tasks:
 
-    - name: Test if systemctl is present
-      shell: command -v systemctl
+    - name: Test if systemd is running
+      shell: test -d /run/systemd/system && command -v systemctl
       register: systemctl
       ignore_errors: true
 
