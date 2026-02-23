@@ -82,6 +82,9 @@ deploy_app() {
     local app_name="$1"
     local app_dir="$TEST_APP_DIR/$app_name"
     
+    # Reset piku-nginx.path in case systemd rate-limited it from rapid deployments
+    ssh_server "systemctl reset-failed piku-nginx.path piku-nginx.service 2>/dev/null; systemctl restart piku-nginx.path 2>/dev/null" || true
+    
     cd "$app_dir"
     git add -A
     git commit -m "Deploy $app_name" --allow-empty
@@ -138,8 +141,25 @@ wait_for_app() {
     ssh_server "ls -la /home/piku/.piku/uwsgi-enabled/" || true
     ssh_server "ls -la /home/piku/.piku/nginx/" || true
     ssh_server "systemctl status uwsgi-piku" || true
+    ssh_server "systemctl status nginx" || true
+    ssh_server "systemctl status piku-nginx.path" || true
+    ssh_server "systemctl status piku-nginx.service" || true
     ssh_server "cat /home/piku/.piku/uwsgi/uwsgi.log | tail -30" || true
     ssh_server "cat /home/piku/.piku/logs/${app_name}/*.log | tail -20" 2>/dev/null || true
+    log_info "--- nginx error log ---"
+    ssh_server "tail -30 /var/log/nginx/error.log" || true
+    log_info "--- journalctl nginx ---"
+    ssh_server "journalctl -u nginx --no-pager -n 30" || true
+    log_info "--- app nginx config ---"
+    ssh_server "cat /home/piku/.piku/nginx/${app_name}.conf" || true
+    log_info "--- nginx upstream for ${app_name} ---"
+    ssh_server "nginx -T 2>&1 | grep -A 5 'upstream ${app_name}'" || true
+    log_info "--- curl -v test ---"
+    ssh_server "curl -v http://localhost -H 'Host: ${app_name}' 2>&1" || true
+    log_info "--- uwsgi vassal ini ---"
+    ssh_server "cat /home/piku/.piku/uwsgi-available/${app_name}*.ini" || true
+    log_info "--- app logs ---"
+    ssh_server "ls -la /home/piku/.piku/logs/${app_name}/ && cat /home/piku/.piku/logs/${app_name}/*.log" || true
     log_info "=== End debug info ==="
     return 1
 }
@@ -261,6 +281,9 @@ EOF
 
 # Create a basic Flask app with pyproject.toml (UV)
 # Usage: create_uv_flask_app <app_dir> [python_version]
+# Note: python_version sets requires-python in pyproject.toml.
+# PYTHON_VERSION is NOT set in ENV to avoid uv downloading a managed
+# Python that mismatches the uwsgi plugin's system Python.
 create_uv_flask_app() {
     local app_dir="$1"
     local python_version="${2:-3.10}"
@@ -293,7 +316,6 @@ wsgi: wsgi:app
 EOF
 
     cat > "$app_dir/ENV" << EOF
-PYTHON_VERSION=$python_version
 NGINX_SERVER_NAME=$app_name
 EOF
 }

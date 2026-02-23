@@ -6,8 +6,9 @@
     user: "{{ piku_user | default('piku', true)}}"
     ssh_user: "{{ lookup('env', 'SUDO_USER') | default('root') }}"
     # Piku source configuration - allows installing from forks
-    piku_repo: "{{ piku_repo | default('piku/piku', true) }}"
-    piku_branch: "{{ piku_branch | default('master', true) }}"
+    # Override via --extra-vars: piku_repo=owner/repo piku_branch=branch
+    piku_repo: "piku/piku"
+    piku_branch: "master"
     piku_raw_url: "https://raw.githubusercontent.com/{{ piku_repo }}/{{ piku_branch }}"
   tasks:
     - name: Add piku user
@@ -16,6 +17,15 @@
         password: !
         comment: PaaS access
         group: www-data
+
+    # Debian Trixie+ defaults to DIR_MODE=0700 for home directories.
+    # nginx (running as www-data) needs to traverse the piku home directory
+    # to reach unix sockets in ~/.piku/nginx/. Since piku's primary group
+    # is www-data, mode 0750 is sufficient and secure.
+    - name: Ensure piku home directory is accessible to www-data group
+      file:
+        path: "{{homedir}}"
+        mode: "0750"
 
     - name: Creates directory
       file:
@@ -52,7 +62,7 @@
 
     - name: Install Debian Packages
       apt:
-        pkg: ['bc', 'git', 'sudo', 'cron', 'build-essential', 'libpcre3-dev', 'zlib1g-dev', 'python3', 'python3-pip', 'python3-click', 'python3-dev', 'python3-virtualenv', 'python3-setuptools', 'nginx', 'acl', 'uwsgi-core', 'uwsgi-plugin-python3', 'nodeenv']
+        pkg: ['bc', 'curl', 'git', 'sudo', 'cron', 'build-essential', 'libpcre2-dev', 'zlib1g-dev', 'python3', 'python3-pip', 'python3-click', 'python3-dev', 'python3-virtualenv', 'python3-setuptools', 'nginx', 'acl', 'uwsgi-core', 'uwsgi-plugin-python3', 'nodeenv']
         update_cache: true
         state: present
 
@@ -97,16 +107,19 @@
   become_user: "{{ piku_user | default('piku', true)}}"
   vars:
     # Piku source configuration - allows installing from forks
-    piku_repo: "{{ piku_repo | default('piku/piku', true) }}"
-    piku_branch: "{{ piku_branch | default('master', true) }}"
+    # Override via --extra-vars: piku_repo=owner/repo piku_branch=branch
+    piku_repo: "piku/piku"
+    piku_branch: "master"
     piku_raw_url: "https://raw.githubusercontent.com/{{ piku_repo }}/{{ piku_branch }}"
   tasks:
-    # Note: Using GitHub API instead of raw.githubusercontent.com to bypass CDN caching
-    # GitHub's CDN caches raw content aggressively and ignores query parameters
+    # Try GitHub API first (bypasses CDN caching), fall back to raw.githubusercontent.com
+    # if rate-limited (unauthenticated API allows only 60 requests/hour per IP)
     - name: Fetch piku.py script
       shell: |
         curl -fsSL "https://api.github.com/repos/{{ piku_repo }}/contents/piku.py?ref={{ piku_branch }}" \
           -H "Accept: application/vnd.github.v3.raw" \
+          -o ~/piku.py \
+        || curl -fsSL "https://raw.githubusercontent.com/{{ piku_repo }}/{{ piku_branch }}/piku.py" \
           -o ~/piku.py
         chmod 0700 ~/piku.py
 
@@ -173,13 +186,14 @@
   become: yes
   vars:
     # Piku source configuration - allows installing from forks
-    piku_repo: "{{ piku_repo | default('piku/piku', true) }}"
-    piku_branch: "{{ piku_branch | default('master', true) }}"
+    # Override via --extra-vars: piku_repo=owner/repo piku_branch=branch
+    piku_repo: "piku/piku"
+    piku_branch: "master"
     piku_raw_url: "https://raw.githubusercontent.com/{{ piku_repo }}/{{ piku_branch }}"
   tasks:
 
-    - name: Test if systemctl is present
-      shell: command -v systemctl
+    - name: Test if systemd is running
+      shell: test -d /run/systemd/system && command -v systemctl
       register: systemctl
       ignore_errors: true
 
