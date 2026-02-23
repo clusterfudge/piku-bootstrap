@@ -138,8 +138,14 @@ wait_for_app() {
     ssh_server "ls -la /home/piku/.piku/uwsgi-enabled/" || true
     ssh_server "ls -la /home/piku/.piku/nginx/" || true
     ssh_server "systemctl status uwsgi-piku" || true
+    ssh_server "systemctl status nginx" || true
+    ssh_server "systemctl status piku-nginx.path" || true
+    ssh_server "systemctl status piku-nginx.service" || true
     ssh_server "cat /home/piku/.piku/uwsgi/uwsgi.log | tail -30" || true
     ssh_server "cat /home/piku/.piku/logs/${app_name}/*.log | tail -20" 2>/dev/null || true
+    ssh_server "cat /var/log/nginx/error.log | tail -30" 2>/dev/null || true
+    ssh_server "cat /home/piku/.piku/nginx/${app_name}.conf" 2>/dev/null || true
+    ssh_server "nginx -T 2>&1 | grep -A 5 'upstream ${app_name}'" 2>/dev/null || true
     log_info "=== End debug info ==="
     return 1
 }
