@@ -6,8 +6,9 @@
     user: "{{ piku_user | default('piku', true)}}"
     ssh_user: "{{ lookup('env', 'SUDO_USER') | default('root') }}"
     # Piku source configuration - allows installing from forks
-    piku_repo: "{{ piku_repo | default('piku/piku', true) }}"
-    piku_branch: "{{ piku_branch | default('master', true) }}"
+    # Override via --extra-vars: piku_repo=owner/repo piku_branch=branch
+    piku_repo: "piku/piku"
+    piku_branch: "master"
     piku_raw_url: "https://raw.githubusercontent.com/{{ piku_repo }}/{{ piku_branch }}"
   tasks:
     - name: Add piku user
@@ -97,8 +98,9 @@
   become_user: "{{ piku_user | default('piku', true)}}"
   vars:
     # Piku source configuration - allows installing from forks
-    piku_repo: "{{ piku_repo | default('piku/piku', true) }}"
-    piku_branch: "{{ piku_branch | default('master', true) }}"
+    # Override via --extra-vars: piku_repo=owner/repo piku_branch=branch
+    piku_repo: "piku/piku"
+    piku_branch: "master"
     piku_raw_url: "https://raw.githubusercontent.com/{{ piku_repo }}/{{ piku_branch }}"
   tasks:
     # Note: Using GitHub API instead of raw.githubusercontent.com to bypass CDN caching
@@ -173,8 +175,9 @@
   become: yes
   vars:
     # Piku source configuration - allows installing from forks
-    piku_repo: "{{ piku_repo | default('piku/piku', true) }}"
-    piku_branch: "{{ piku_branch | default('master', true) }}"
+    # Override via --extra-vars: piku_repo=owner/repo piku_branch=branch
+    piku_repo: "piku/piku"
+    piku_branch: "master"
     piku_raw_url: "https://raw.githubusercontent.com/{{ piku_repo }}/{{ piku_branch }}"
   tasks:
 
