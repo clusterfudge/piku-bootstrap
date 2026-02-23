@@ -82,6 +82,9 @@ deploy_app() {
     local app_name="$1"
     local app_dir="$TEST_APP_DIR/$app_name"
     
+    # Reset piku-nginx.path in case systemd rate-limited it from rapid deployments
+    ssh_server "systemctl reset-failed piku-nginx.path piku-nginx.service 2>/dev/null; systemctl restart piku-nginx.path 2>/dev/null" || true
+    
     cd "$app_dir"
     git add -A
     git commit -m "Deploy $app_name" --allow-empty
