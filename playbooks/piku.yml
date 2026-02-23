@@ -18,6 +18,15 @@
         comment: PaaS access
         group: www-data
 
+    # Debian Trixie+ defaults to DIR_MODE=0700 for home directories.
+    # nginx (running as www-data) needs to traverse the piku home directory
+    # to reach unix sockets in ~/.piku/nginx/. Since piku's primary group
+    # is www-data, mode 0750 is sufficient and secure.
+    - name: Ensure piku home directory is accessible to www-data group
+      file:
+        path: "{{homedir}}"
+        mode: "0750"
+
     - name: Creates directory
       file:
         path: "{{homedir}}/.ssh"
