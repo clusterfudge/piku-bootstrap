@@ -22,6 +22,10 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
       - run: ./piku-bootstrap first-run --no-interactive
-      - run: cd ~/.piku-bootstrap/piku-bootstrap && git checkout $GITHUB_SHA
+      # Overlay the current checkout's files so install uses our version
+      # (first-run clones upstream, which won't have fork/PR commits)
+      - run: |
+          cp piku-bootstrap ~/.piku-bootstrap/piku-bootstrap/piku-bootstrap
+          cp -r playbooks/* ~/.piku-bootstrap/piku-bootstrap/playbooks/
       - run: ./piku-bootstrap install
 
