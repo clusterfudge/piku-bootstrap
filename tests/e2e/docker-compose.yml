@@ -2,7 +2,7 @@ services:
   piku-server:
     build:
       context: ../../
-      dockerfile: tests/e2e/server/Dockerfile
+      dockerfile: ${SERVER_DOCKERFILE:-tests/e2e/server/Dockerfile}
     hostname: piku-server
     privileged: true
     volumes:

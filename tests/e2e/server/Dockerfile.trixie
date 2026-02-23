@@ -1,0 +1,71 @@
+# Piku Server Dockerfile - Debian Trixie (13)
+# Tests piku-bootstrap on the latest Raspbian/Debian release.
+#
+# Unlike the default Dockerfile (which uses a pre-built systemd image),
+# this builds systemd support from scratch on debian:trixie since
+# jrei/systemd-debian doesn't have a Trixie tag yet.
+
+FROM debian:trixie
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV container=docker
+
+# Install systemd and configure for running inside Docker
+RUN apt-get update && apt-get install -y \
+    systemd \
+    systemd-sysv \
+    dbus \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    # Remove unnecessary systemd units that interfere with container operation
+    && rm -f /lib/systemd/system/multi-user.target.wants/* \
+    && rm -f /etc/systemd/system/*.wants/* \
+    && rm -f /lib/systemd/system/local-fs.target.wants/* \
+    && rm -f /lib/systemd/system/sockets.target.wants/*udev* \
+    && rm -f /lib/systemd/system/sockets.target.wants/*initctl* \
+    && rm -f /lib/systemd/system/basic.target.wants/* \
+    && rm -f /lib/systemd/system/anaconda.target.wants/* \
+    && rm -f /lib/systemd/system/plymouth* \
+    && rm -f /lib/systemd/system/systemd-update-utmp*
+
+VOLUME ["/sys/fs/cgroup"]
+
+# Install base dependencies needed before piku-bootstrap runs
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    openssh-server \
+    sudo \
+    ca-certificates \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js from Debian repos (Trixie ships Node 18.x)
+RUN apt-get update && apt-get install -y \
+    nodejs \
+    npm \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv (for Python UV support)
+# Install directly to /usr/local/bin so it's available to all users (including piku)
+RUN curl -LsSf https://astral.sh/uv/install.sh | env CARGO_HOME=/usr/local UV_INSTALL_DIR=/usr/local/bin sh
+
+# Configure SSH
+RUN mkdir -p /var/run/sshd
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+RUN sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+RUN ssh-keygen -A
+
+# Copy piku-bootstrap files to the location where the script expects them
+# This prevents the script from cloning the upstream repo during first-run
+RUN mkdir -p /root/.piku-bootstrap/piku-bootstrap
+COPY piku-bootstrap /root/.piku-bootstrap/piku-bootstrap/piku-bootstrap
+COPY playbooks /root/.piku-bootstrap/piku-bootstrap/playbooks
+
+# Also keep a copy in /root for easy access
+COPY piku-bootstrap /root/piku-bootstrap
+RUN systemctl enable ssh
+
+EXPOSE 22
+CMD ["/lib/systemd/systemd"]

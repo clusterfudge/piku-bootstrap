@@ -1,0 +1,135 @@
+name: E2E Tests (Debian Trixie)
+
+# Trixie (Debian 13) is the latest Raspbian/Raspberry Pi OS base.
+# This workflow tests piku-bootstrap on Trixie to catch:
+#   - Removed/renamed packages (e.g. libpcre3-dev -> libpcre2-dev)
+#   - Python 3.13 compatibility
+#   - Any other packaging or runtime changes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      piku_repo:
+        description: 'Piku repository (owner/repo)'
+        required: false
+        default: 'piku/piku'
+      piku_branch:
+        description: 'Piku branch'
+        required: false
+        default: 'master'
+      test_filter:
+        description: 'Test filter pattern (e.g., "python", "nodejs")'
+        required: false
+        default: ''
+
+jobs:
+  # First job: just try to install piku-bootstrap on Trixie.
+  # This surfaces package-level issues (libpcre3-dev, etc.) quickly.
+  bootstrap-install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Trixie server image
+        run: |
+          cd tests/e2e
+          DOCKER_BUILDKIT=0 docker compose -p piku-trixie-install build --no-cache piku-server
+        env:
+          SERVER_DOCKERFILE: tests/e2e/server/Dockerfile.trixie
+
+      - name: Start container with systemd
+        run: |
+          cd tests/e2e
+          docker compose -p piku-trixie-install up -d piku-server
+          # Wait for systemd
+          for i in $(seq 1 60); do
+            if docker compose -p piku-trixie-install exec -T piku-server \
+              systemctl is-system-running --wait 2>/dev/null | grep -qE "(running|degraded)"; then
+              echo "Systemd is ready"
+              break
+            fi
+            sleep 2
+          done
+        env:
+          SERVER_DOCKERFILE: tests/e2e/server/Dockerfile.trixie
+
+      - name: Run piku-bootstrap first-run
+        run: |
+          cd tests/e2e
+          docker compose -p piku-trixie-install exec -T piku-server \
+            bash -c 'cd /root && ./piku-bootstrap first-run --no-interactive'
+        env:
+          SERVER_DOCKERFILE: tests/e2e/server/Dockerfile.trixie
+
+      - name: Run piku-bootstrap install
+        run: |
+          cd tests/e2e
+          docker compose -p piku-trixie-install exec -T piku-server \
+            bash -c "cd /root && ./piku-bootstrap install --piku-repo=${{ github.event.inputs.piku_repo || 'piku/piku' }} --piku-branch=${{ github.event.inputs.piku_branch || 'master' }}"
+        env:
+          SERVER_DOCKERFILE: tests/e2e/server/Dockerfile.trixie
+
+      - name: Show installed versions
+        if: always()
+        run: |
+          cd tests/e2e
+          docker compose -p piku-trixie-install exec -T piku-server bash -c '
+            echo "=== OS Release ==="
+            cat /etc/os-release
+            echo ""
+            echo "=== Python ==="
+            python3 --version
+            echo ""
+            echo "=== Node.js ==="
+            node --version 2>/dev/null || echo "not installed"
+            echo ""
+            echo "=== uWSGI ==="
+            uwsgi --version 2>/dev/null || echo "not installed"
+            echo ""
+            echo "=== nginx ==="
+            nginx -v 2>&1 || echo "not installed"
+            echo ""
+            echo "=== Piku ==="
+            sudo -u piku python3 /home/piku/piku.py --version 2>/dev/null || echo "not available"
+          ' || true
+        env:
+          SERVER_DOCKERFILE: tests/e2e/server/Dockerfile.trixie
+
+      - name: Cleanup
+        if: always()
+        run: |
+          cd tests/e2e
+          docker compose -p piku-trixie-install down -v --remove-orphans 2>/dev/null || true
+        env:
+          SERVER_DOCKERFILE: tests/e2e/server/Dockerfile.trixie
+
+  # Full E2E tests on Trixie — only runs if bootstrap-install succeeds
+  e2e-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: bootstrap-install
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run E2E tests on Trixie
+        run: |
+          cd tests/e2e
+          chmod +x run_e2e_tests.sh
+          FILTER="${{ github.event.inputs.test_filter || '' }}"
+          if [ -n "$FILTER" ]; then
+            ./run_e2e_tests.sh --distro=trixie "$FILTER"
+          else
+            ./run_e2e_tests.sh --distro=trixie
+          fi
+        env:
+          PIKU_REPO: ${{ github.event.inputs.piku_repo || 'piku/piku' }}
+          PIKU_BRANCH: ${{ github.event.inputs.piku_branch || 'master' }}

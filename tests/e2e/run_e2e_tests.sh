@@ -9,6 +9,7 @@ COMPOSE_PROJECT="piku-e2e-tests"
 KEEP_CONTAINERS=false
 NO_BUILD=false
 TEST_FILTER=""
+DISTRO=""
 PIKU_REPO="${PIKU_REPO:-piku/piku}"
 PIKU_BRANCH="${PIKU_BRANCH:-master}"
 
@@ -27,13 +28,15 @@ OPTIONS:
     -h, --help          Show this help message
     -k, --keep          Keep containers running after tests (for debugging)
     -n, --no-build      Skip Docker image build
+    --distro=DISTRO     Use a distro-specific server Dockerfile (e.g., trixie)
     --piku-repo=REPO    GitHub repo to install piku from (default: piku/piku)
     --piku-branch=BRANCH Branch to install from (default: master)
 
 EXAMPLES:
     ./run_e2e_tests.sh                          # Run all tests
-    ./run_e2e_tests.sh --keep                 # Keep containers for debugging
-    ./run_e2e_tests.sh python                 # Run only Python-related tests
+    ./run_e2e_tests.sh --keep                   # Keep containers for debugging
+    ./run_e2e_tests.sh python                   # Run only Python-related tests
+    ./run_e2e_tests.sh --distro=trixie          # Run tests on Debian Trixie
 USAGE
 }
 
@@ -56,6 +59,7 @@ while [[ $# -gt 0 ]]; do
         -h|--help) usage; exit 0 ;;
         -k|--keep) KEEP_CONTAINERS=true; shift ;;
         -n|--no-build) NO_BUILD=true; shift ;;
+        --distro=*) DISTRO="${1#*=}"; shift ;;
         --piku-repo=*) PIKU_REPO="${1#*=}"; shift ;;
         --piku-branch=*) PIKU_BRANCH="${1#*=}"; shift ;;
         -*) log_error "Unknown option: $1"; usage; exit 1 ;;
@@ -68,6 +72,22 @@ trap cleanup EXIT
 log_info "=== Piku E2E Test Suite ==="
 log_info "Piku Repository: $PIKU_REPO"
 log_info "Piku Branch: $PIKU_BRANCH"
+
+# Resolve distro-specific Dockerfile
+if [ -n "$DISTRO" ]; then
+    if [ ! -f "server/Dockerfile.${DISTRO}" ]; then
+        log_error "No Dockerfile found for distro: $DISTRO"
+        log_info "Available distros:"
+        for f in server/Dockerfile.*; do
+            [ -f "$f" ] && echo "  $(basename "$f" | sed 's/Dockerfile\.//')"
+        done
+        exit 1
+    fi
+    export SERVER_DOCKERFILE="tests/e2e/server/Dockerfile.${DISTRO}"
+    log_info "Distro: $DISTRO (using $SERVER_DOCKERFILE)"
+else
+    log_info "Distro: default (Ubuntu 22.04)"
+fi
 
 export PIKU_REPO PIKU_BRANCH COMPOSE_PROJECT
 
